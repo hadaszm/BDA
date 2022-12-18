@@ -2,26 +2,25 @@ from pymongo import MongoClient
 import json
 import requests
 
+
 # constants
 DATABASE_NAME = 'bda'
-HOST = 'localhost'
-PORT = 27017
-USERNAME = 'mongoadmin'
-PASSWORD = 'pass1234'
+CONNECTION_STRING = "mongodb://34.118.42.39:27017/"
 API_ADRESS = 'https://api.nextbike.net/maps/nextbike-live.json'
+COLLECTION_NAME = 'bikes'
 
 
 # functions
 
 def create_mong_client():
-    client = MongoClient(HOST, PORT, username= USERNAME, password=PASSWORD)
+    client = MongoClient(CONNECTION_STRING, directConnection=True)
     return client
 
 
 def return_collecion(client):
     # create database
     database = client[DATABASE_NAME]
-    bikes = database.bikes
+    bikes = database[COLLECTION_NAME]
     return bikes
 
 def get_API_response():
