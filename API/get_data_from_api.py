@@ -46,13 +46,14 @@ def insert_document(documentToInsert,collection):
         print(e)
 
 
-def get_data():
+def get_data(event):
     '''main function'''
     client = create_mong_client()
     collection = return_collecion(client)
     response = get_API_response()
     insert_document(response,collection)
-
+    return 'Data fetched from Nextbixe and saved.'
+    
 
 if __name__ == "__main__":
     get_data()
