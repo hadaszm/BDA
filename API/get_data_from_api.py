@@ -1,27 +1,32 @@
 from pymongo import MongoClient
 import json
 import requests
+import datetime
+
 
 # constants
 DATABASE_NAME = 'bda'
-HOST = 'localhost'
-PORT = 27017
-USERNAME = 'mongoadmin'
-PASSWORD = 'pass1234'
+CONNECTION_STRING = "mongodb://34.118.42.39:27017/"
 API_ADRESS = 'https://api.nextbike.net/maps/nextbike-live.json'
+COLLECTION_NAME = 'bikes'
+
+# list of need fields
+country_list_names = ['name','country_name','booked_bikes','set_point_bikes','available_bikes']
+cities_list_names = ['uid','name','available_bikes','num_places', 'booked_bikes','set_point_bikes']
+places_list_names = ['uid','lat','lng','bikes_available_to_rent','bike_racks','free_racks','special_racks','bike_numbers','name','booked_bikes','bikes','free_special_racks']
 
 
 # functions
 
 def create_mong_client():
-    client = MongoClient(HOST, PORT, username= USERNAME, password=PASSWORD)
+    client = MongoClient(CONNECTION_STRING, directConnection=True)
     return client
 
 
 def return_collecion(client):
     # create database
     database = client[DATABASE_NAME]
-    bikes = database.bikes
+    bikes = database[COLLECTION_NAME]
     return bikes
 
 def get_API_response():
@@ -33,6 +38,24 @@ def get_API_response():
         return response.json()
     except Exception as e:
         print(e)
+
+
+def get_cities_data(cities):
+    cities_res = []
+    for city in cities:
+        city_entity = {x:city[x] for x in cities_list_names}            
+        city_entity['places'] =[{x:place[x] for x in places_list_names} for place in city['places']]           
+        cities_res.append(city_entity)
+    return cities_res
+
+def transform_response(response):
+    final_list = []
+    for country in response['countries']:
+        entity = {x:country[x] for x in country_list_names}
+        entity['cities'] = get_cities_data(country['cities'])
+        final_list.append(entity)
+    res = {'countries':final_list, 'timestamp':datetime.datetime.now()}
+    return res
 
 def insert_document(documentToInsert,collection):
     '''Insert document to mongo, checks if one document was inserted'''
@@ -51,9 +74,9 @@ def get_data(event):
     client = create_mong_client()
     collection = return_collecion(client)
     response = get_API_response()
-    insert_document(response,collection)
+    transformed_response = transform_response(response)
+    insert_document(transformed_response,collection)
     return 'Data fetched from Nextbixe and saved.'
-    
 
 if __name__ == "__main__":
     get_data()
