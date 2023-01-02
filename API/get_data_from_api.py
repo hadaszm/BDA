@@ -2,13 +2,14 @@ from pymongo import MongoClient
 import json
 import requests
 import datetime
-
+import pymongo
 
 # constants
 DATABASE_NAME = 'bda'
 CONNECTION_STRING = "mongodb://34.118.42.39:27017/"
 API_ADRESS = 'https://api.nextbike.net/maps/nextbike-live.json'
 COLLECTION_NAME = 'bikes'
+LAST_COLLECTION_NAME = 'bikes_last'
 
 # list of need fields
 country_list_names = ['name','country_name','booked_bikes','set_point_bikes','available_bikes']
@@ -19,14 +20,14 @@ places_list_names = ['uid','lat','lng','bikes_available_to_rent','bike_racks','f
 # functions
 
 def create_mong_client():
-    client = MongoClient(CONNECTION_STRING, directConnection=True)
+    client = MongoClient(CONNECTION_STRING, directConnection=True,serverSelectionTimeoutMS = 600000)
     return client
 
 
-def return_collecion(client):
+def return_collecion(client,collection_name):
     # create database
     database = client[DATABASE_NAME]
-    bikes = database[COLLECTION_NAME]
+    bikes = database[collection_name]
     return bikes
 
 def get_API_response():
@@ -68,14 +69,32 @@ def insert_document(documentToInsert,collection):
     except Exception as e:
         print(e)
 
+def delete_the_oldest(collection):
+    ''' delete the last document'''
+    try:
+        res = collection.find({}, {'timestamp':1}).sort([('timestamp', pymongo.ASCENDING)])
+        number_before_delete = collection.count_documents({})
+        res = list(res)
+        collection.delete_one( {"_id": res[0]['_id']})
+        number_after_delete = collection.count_documents({})
+        if number_before_delete - number_after_delete !=1:
+            raise Exception("Exception while deleteing from mongo")
+    except Exception as e:
+        print(e)
+
+
+
 
 def get_data(event):
     '''main function'''
     client = create_mong_client()
-    collection = return_collecion(client)
+    collection = return_collecion(client, COLLECTION_NAME)
+    collection_last = return_collecion(client, LAST_COLLECTION_NAME)
     response = get_API_response()
     transformed_response = transform_response(response)
     insert_document(transformed_response,collection)
+    insert_document(transformed_response,collection_last)
+    delete_the_oldest(collection_last)
     return 'Data fetched from Nextbixe and saved.'
 
 if __name__ == "__main__":
