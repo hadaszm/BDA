@@ -48,7 +48,7 @@ def return_list(collection):
       {'$project':{'countries.cities.name':1}}])
     df = pd.DataFrame.from_records(list(doc))
     df = pd.concat([pd.json_normalize(x) for x in df['countries']])
-    return list(df['cities.name'])  
+    return sorted(list(df['cities.name'])  )
 
 
 # Dash app
