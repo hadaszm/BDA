@@ -52,7 +52,7 @@ def main(db, engine, cityuid):
     logging.warning('Collecting data from mongo')
     mongo_src = db.bikes.aggregate([
         {"$unwind": "$countries"},
-        {"$unwind": "$countries.cities"}
+        {"$unwind": "$countries.cities"},
         {"$match":
              {"countries.cities.uid": {"$in": cityuid}}
          }
